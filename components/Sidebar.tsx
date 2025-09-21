@@ -13,7 +13,16 @@ interface SidebarProps {
     onUpdateChatTitle: (id: string, newTitle: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat, onSelectChat, onOpenAbout, onOpenFaq, onClearChatMessages, onUpdateChatTitle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+    chats, 
+    activeChatId, 
+    onNewChat, 
+    onSelectChat, 
+    onOpenAbout, 
+    onOpenFaq, 
+    onClearChatMessages, 
+    onUpdateChatTitle 
+}) => {
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [newTitle, setNewTitle] = useState('');
     const editInputRef = useRef<HTMLInputElement>(null);
@@ -79,10 +88,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat
                                         value={newTitle}
                                         onChange={(e) => setNewTitle(e.target.value)}
                                         onKeyDown={handleKeyDown}
-                                        onBlur={handleSaveTitle}
+                                        onBlur={handleCancelEdit}  // FIX: mos bëj auto-save në blur
                                         className="flex-1 w-full bg-transparent focus:outline-none text-sm text-slate-800"
                                     />
-                                    <button onClick={handleSaveTitle} className="p-1 text-green-600 hover:bg-green-100 rounded-full">
+                                    <button 
+                                        onClick={handleSaveTitle} 
+                                        className="p-1 text-green-600 hover:bg-green-100 rounded-full"
+                                    >
                                         <CheckIcon className="w-4 h-4" />
                                     </button>
                                 </div>
