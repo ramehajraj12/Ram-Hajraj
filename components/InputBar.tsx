@@ -20,20 +20,14 @@ const SUPPORTED_MIME_TYPES_MAP: Record<string, string[]> = {
 
 const getFileDetails = (file: File): { supported: boolean; mimeType: string } => {
     const extension = `.${file.name.split('.').pop()?.toLowerCase()}`;
-
-    // 1. Check by browser-provided MIME type
     if (file.type && SUPPORTED_MIME_TYPES_MAP[file.type]) {
         return { supported: true, mimeType: file.type };
     }
-
-    // 2. If MIME type is missing or not in map, check by extension
     for (const [mime, extensions] of Object.entries(SUPPORTED_MIME_TYPES_MAP)) {
         if (extensions.includes(extension)) {
             return { supported: true, mimeType: mime };
         }
     }
-
-    // 3. If neither matches, it's unsupported
     return { supported: false, mimeType: file.type || 'application/octet-stream' };
 };
 
@@ -92,7 +86,7 @@ export const InputBar: React.FC<InputBarProps> = ({ onSendMessage, isLoading }) 
             fileInputRef.current.value = '';
         }
         if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto'; // Reset height
+            textareaRef.current.style.height = 'auto';
         }
     };
     
@@ -128,14 +122,14 @@ export const InputBar: React.FC<InputBarProps> = ({ onSendMessage, isLoading }) 
                     </button>
                 </div>
             )}
-            <div className="relative flex items-end bg-white rounded-xl shadow-lg transition-all duration-300 focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2">
+            <div className={`relative flex items-end bg-white rounded-xl shadow-lg transition-all duration-300 focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2`}>
                 <textarea
                     ref={textareaRef}
                     value={text}
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
                     disabled={isLoading}
-                    placeholder="Më shkruani pyetjen tuaj... (p.sh. 'Më trego si të bëj një t-test')"
+                    placeholder={"Më shkruani pyetjen tuaj... (p.sh. 'Më trego si të bëj një t-test')"}
                     className="w-full pl-12 pr-24 py-3 bg-transparent border-none resize-none focus:ring-0 text-slate-800 placeholder-slate-400 disabled:bg-slate-100/50"
                     rows={1}
                     style={{ maxHeight: '200px' }}
@@ -162,7 +156,7 @@ export const InputBar: React.FC<InputBarProps> = ({ onSendMessage, isLoading }) 
                     <button
                         onClick={handleSendMessageClick}
                         disabled={isLoading || (!text.trim() && !file)}
-                        className="p-2 bg-gradient-to-br from-green-600 to-teal-700 text-white rounded-full transition-all duration-200 enabled:hover:scale-110 enabled:hover:shadow-lg disabled:from-green-300 disabled:to-teal-400 disabled:cursor-not-allowed"
+                        className="p-2 bg-gradient-to-br from-green-600 to-teal-700 text-white rounded-full transition-all duration-200 enabled:hover:scale-110 enabled:hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Dërgo mesazhin"
                     >
                         <SendIcon className="w-6 h-6" />

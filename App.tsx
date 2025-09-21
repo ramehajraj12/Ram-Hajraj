@@ -4,13 +4,12 @@ import { ChatWindow } from './components/ChatWindow';
 import { InputBar } from './components/InputBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import type { ChatMessage, ChatSession, UploadedFile } from './types';
-import { initializeGeminiClient, apiKeyError as initialApiKeyError, initChat, sendMessageStream } from './services/geminiService';
+import { sendMessageStream } from './services/geminiService';
 import { Header } from './components/Header';
 import { AboutModal } from './components/AboutModal';
 import { Sidebar } from './components/Sidebar';
 import * as chatHistoryService from './services/chatHistoryService';
 import { FAQModal } from './components/FAQModal';
-import { ApiKeySetup } from './components/ApiKeySetup';
 
 const App: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -21,54 +20,26 @@ const App: React.FC = () => {
     const [chats, setChats] = useState<ChatSession[]>([]);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     
-    const [isApiReady, setIsApiReady] = useState<boolean>(!initialApiKeyError);
-    const [apiKeyError, setApiKeyErrorState] = useState<string | null>(initialApiKeyError);
-    
-    const chatRef = useRef<Chat | null>(null);
-
     useEffect(() => {
         const savedChats = chatHistoryService.getChats();
         setChats(savedChats);
-        
-        if (!isApiReady) {
-            const storedKey = localStorage.getItem('gemini_api_key');
-            if (storedKey) {
-                handleApiKeySubmit(storedKey, true); // silentFail = true
-            }
+        const lastActiveId = localStorage.getItem('spss_last_active_chat_id');
+        if (lastActiveId && savedChats.some(c => c.id === lastActiveId)) {
+            setActiveChatId(lastActiveId);
         }
     }, []);
 
     useEffect(() => {
-        if (isApiReady) {
-            const activeChat = chats.find(c => c.id === activeChatId);
-            if (activeChat) {
-                setMessages(activeChat.messages);
-                chatRef.current = initChat(activeChat.messages);
-            } else {
-                setMessages([]);
-                chatRef.current = initChat([]);
-            }
+        const activeChat = chats.find(c => c.id === activeChatId);
+        if (activeChat) {
+            setMessages(activeChat.messages);
+        } else {
+            setMessages([]);
         }
-    }, [isApiReady, activeChatId, chats]);
+    }, [activeChatId, chats]);
 
-    const handleApiKeySubmit = (apiKey: string, silentFail = false) => {
-        if (initializeGeminiClient(apiKey)) {
-            setIsApiReady(true);
-            setApiKeyErrorState(null);
-            localStorage.setItem('gemini_api_key', apiKey);
-        } else if (!silentFail) {
-            setApiKeyErrorState("API Key i pavlefshëm. Ju lutem provoni përsëri ose gjeneroni një të ri.");
-        }
-    };
-    
     const handleSendMessage = useCallback(async (text: string, file: UploadedFile | null) => {
         if (!text.trim() && !file) return;
-
-        if (!chatRef.current) {
-            setError("Shërbimi i bisedës nuk është i disponueshem. Provoni të rifreskoni faqen.");
-            setIsLoading(false);
-            return;
-        }
 
         setIsLoading(true);
         setError(null);
@@ -86,6 +57,7 @@ const App: React.FC = () => {
             currentChatId = newChat.id;
             setChats(prev => [newChat, ...prev]);
             setActiveChatId(newChat.id);
+            localStorage.setItem('spss_last_active_chat_id', newChat.id);
         }
         
         const updatedMessages = [...messages, userMessage];
@@ -95,7 +67,7 @@ const App: React.FC = () => {
         setMessages(prev => [...prev, botMessage]);
 
         try {
-            const stream = await sendMessageStream(chatRef.current!, text, file);
+            const stream = await sendMessageStream(updatedMessages, text, file);
             let fullResponse = '';
             let lastChunk = null;
 
@@ -125,9 +97,8 @@ const App: React.FC = () => {
             });
 
         } catch (e: any) {
-            const errorMessage = "Ndodhi një gabim gjatë marrjes së përgjigjes. Ju lutem provoni përsëri.";
-            
             console.error(e);
+            const errorMessage = "Ndodhi një gabim gjatë marrjes së përgjigjes. Ju lutem provoni përsëri ose rifreskoni faqen.";
             setError(errorMessage);
             setMessages(prev =>
                 prev.map(msg =>
@@ -141,8 +112,13 @@ const App: React.FC = () => {
     
     const handleNewChat = () => {
         setActiveChatId(null);
+        localStorage.removeItem('spss_last_active_chat_id');
         setMessages([]);
-        chatRef.current = initChat();
+    };
+
+    const handleSelectChat = (id: string) => {
+        setActiveChatId(id);
+        localStorage.setItem('spss_last_active_chat_id', id);
     };
 
     const handleClearChatMessages = (chatId: string) => {
@@ -162,10 +138,6 @@ const App: React.FC = () => {
         chatHistoryService.saveChats(updatedChats);
     };
 
-    if (!isApiReady) {
-        return <ApiKeySetup onApiKeySubmit={handleApiKeySubmit} initialError={apiKeyError} />;
-    }
-
     return (
         <div className="flex flex-col h-screen font-sans bg-slate-50 text-slate-800">
             <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
@@ -176,7 +148,7 @@ const App: React.FC = () => {
                     chats={chats}
                     activeChatId={activeChatId}
                     onNewChat={handleNewChat}
-                    onSelectChat={setActiveChatId}
+                    onSelectChat={handleSelectChat}
                     onOpenAbout={() => setIsAboutModalOpen(true)}
                     onOpenFaq={() => setIsFaqModalOpen(true)}
                     onClearChatMessages={handleClearChatMessages}
