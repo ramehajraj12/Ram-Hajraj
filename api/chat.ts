@@ -30,23 +30,37 @@ export default async function handler(req: Request) {
 
     const ai = new GoogleGenAI({ apiKey });
     
-    const buildHistory = (messages: ChatMessage[]): Content[] => {
-        const recentMessages = messages.slice(-20); // Ruaj kontekstin e fundit
-        return recentMessages.map(msg => ({
-            role: msg.role,
-            parts: msg.file ? [{ text: msg.text }, { inlineData: { mimeType: msg.file.type, data: msg.file.base64 } }] : [{ text: msg.text }],
-        }));
-    };
+    // Ndërtojmë historikun e plotë të bisedës
+    const contents: Content[] = history.map(msg => {
+        const parts: Part[] = [];
+        if (msg.text) {
+            parts.push({ text: msg.text });
+        }
+        if (msg.file) {
+            parts.push({
+                inlineData: {
+                    mimeType: msg.file.type,
+                    data: msg.file.base64,
+                },
+            });
+        }
+        return { role: msg.role, parts };
+    });
+
+    // Shtojmë mesazhin e ri të përdoruesit
+    contents.push({
+        role: 'user',
+        parts: message,
+    });
     
-    const chat = ai.chats.create({
+    // Përdorim metodën stateless `generateContentStream`
+    const resultStream = await ai.models.generateContentStream({
         model: 'gemini-2.5-flash',
-        history: buildHistory(history),
+        contents: contents,
         config: {
             systemInstruction: SYSTEM_INSTRUCTION,
         },
     });
-
-    const resultStream = await chat.sendMessageStream({ message });
 
     // Krijimi i një transmetimi (stream) që mund t'i dërgohet klientit
     const stream = new ReadableStream({
