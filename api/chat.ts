@@ -83,7 +83,8 @@ export default async function handler(req: Request) {
 
   } catch (error: any) {
     console.error("Gabim në anën e serverit:", error);
-    return new Response(JSON.stringify({ error: 'Gabim i brendshëm në server', details: error.message }), {
+    const errorMessage = error.message || 'Detajet nuk janë të disponueshme.';
+    return new Response(JSON.stringify({ error: `Gabim i brendshëm në server: ${errorMessage}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
