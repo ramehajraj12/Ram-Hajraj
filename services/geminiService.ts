@@ -3,11 +3,12 @@ import type { Chat, Part, Content, GenerateContentResponse } from '@google/genai
 import { SYSTEM_INSTRUCTION } from '../constants';
 import type { UploadedFile, ChatMessage } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
+export const apiKeyError: string | null = !process.env.API_KEY
+    ? "Vërejtje: Konfigurimi i API Key mungon. Ju lutem, për të aktivizuar funksionalitetin e plotë, shtoni variablën e mjedisit API_KEY në cilësimet e projektit tuaj (p.sh., në Vercel)."
+    : null;
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = apiKeyError ? null : new GoogleGenAI({ apiKey: process.env.API_KEY! });
+
 
 const buildHistory = (messages: ChatMessage[]): Content[] => {
     return messages.map(msg => {
@@ -35,7 +36,11 @@ const buildHistory = (messages: ChatMessage[]): Content[] => {
     });
 };
 
-export const initChat = (history: ChatMessage[] = []): Chat => {
+export const initChat = (history: ChatMessage[] = []): Chat | null => {
+    if (!ai) {
+        console.error(apiKeyError);
+        return null;
+    }
     return ai.chats.create({
         model: 'gemini-2.5-flash',
         history: buildHistory(history),

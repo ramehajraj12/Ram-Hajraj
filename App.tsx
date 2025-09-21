@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Chat } from '@google/genai'; 
+import type { Chat } from '@google/genai';
 import { ChatWindow } from './components/ChatWindow';
 import { InputBar } from './components/InputBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 // FIX: Import UploadedFile type.
 import type { ChatMessage, ChatSession, UploadedFile } from './types';
-import { initChat, sendMessageStream } from './services/geminiService';
+import { initChat, sendMessageStream, apiKeyError } from './services/geminiService';
 import { Header } from './components/Header';
 import { AboutModal } from './components/AboutModal';
 import { Sidebar } from './components/Sidebar';
@@ -26,6 +26,9 @@ const App: React.FC = () => {
     useEffect(() => {
         const savedChats = chatHistoryService.getChats();
         setChats(savedChats);
+        if (apiKeyError) {
+            setError(apiKeyError);
+        }
     }, []);
 
     useEffect(() => {
@@ -44,15 +47,16 @@ const App: React.FC = () => {
     const handleSendMessage = useCallback(async (text: string, file: UploadedFile | null) => {
         if (!text.trim() && !file) return;
 
+        if (!chatRef.current) {
+            setError(apiKeyError || "Shërbimi i bisedës nuk është i disponueshëm. Ju lutem kontrolloni konfigurimin.");
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
         
-        const userMessage: ChatMessage = { 
-            id: Date.now().toString(),  // FIX: id si string
-            role: 'user', 
-            text, 
-            file 
-        };
+        const userMessage: ChatMessage = { id: Date.now(), role: 'user', text, file };
         
         let currentChatId = activeChatId;
 
@@ -65,28 +69,22 @@ const App: React.FC = () => {
             currentChatId = newChat.id;
             setChats(prev => [newChat, ...prev]);
             setActiveChatId(newChat.id);
-            chatRef.current = initChat(); 
         }
         
         const updatedMessages = [...messages, userMessage];
         setMessages(updatedMessages);
 
-        const botMessage: ChatMessage = { 
-            id: (Date.now() + 1).toString(), // FIX: id si string
-            role: 'model', 
-            text: '', 
-            sources: [] 
-        };
+        const botMessage: ChatMessage = { id: Date.now() + 1, role: 'model', text: '', sources: [] };
         setMessages(prev => [...prev, botMessage]);
 
         try {
             const stream = await sendMessageStream(chatRef.current!, text, file);
             let fullResponse = '';
-            let lastChunk: any = null; // FIX: tipi i qartë
+            let lastChunk = null;
 
             for await (const chunk of stream) {
                 fullResponse += chunk.text;
-                lastChunk = chunk; 
+                lastChunk = chunk; // Keep track of the last chunk
                 setMessages(prev =>
                     prev.map(msg =>
                         msg.id === botMessage.id ? { ...msg, text: fullResponse } : msg
@@ -103,15 +101,7 @@ const App: React.FC = () => {
 
             setChats(prevChats => {
                 const newChats = prevChats.map(c => 
-                    c.id === currentChatId 
-                        ? { 
-                            ...c, 
-                            messages: finalMessages, 
-                            title: c.messages.length === 0 
-                                ? text.substring(0, 40) + (text.length > 40 ? '...' : '') 
-                                : c.title 
-                          } 
-                        : c
+                    c.id === currentChatId ? { ...c, messages: finalMessages, title: c.messages.length === 0 ? text.substring(0, 40) + (text.length > 40 ? '...' : '') : c.title } : c
                 );
                 chatHistoryService.saveChats(newChats);
                 return newChats;
@@ -150,9 +140,7 @@ const App: React.FC = () => {
     };
 
     const handleUpdateChatTitle = (chatId: string, newTitle: string) => {
-        const updatedChats = chats.map(c => 
-            c.id === chatId ? { ...c, title: newTitle } : c
-        );
+        const updatedChats = chats.map(c => c.id === chatId ? {...c, title: newTitle } : c);
         setChats(updatedChats);
         chatHistoryService.saveChats(updatedChats);
     };
@@ -182,7 +170,7 @@ const App: React.FC = () => {
                         )}
                     </main>
                     <footer className="bg-transparent p-4">
-                        <InputBar onSendMessage={handleSendMessage} isLoading={isLoading} />
+                        <InputBar onSendMessage={handleSendMessage} isLoading={isLoading || !!apiKeyError} />
                         {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
                         <p className="text-xs text-slate-500 font-medium text-center mt-3 max-w-4xl mx-auto">
                            Mentori është gjithmonë i gatshëm t'ju udhëheqë me saktësi dhe integritet akademik. Bëni pyetjen tuaj për të filluar.
