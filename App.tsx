@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Chat, GroundingChunk } from '@google/genai';
+import type { Chat } from '@google/genai'; 
 import { ChatWindow } from './components/ChatWindow';
 import { InputBar } from './components/InputBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -47,7 +47,12 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
-        const userMessage: ChatMessage = { id: Date.now(), role: 'user', text, file };
+        const userMessage: ChatMessage = { 
+            id: Date.now().toString(),  // FIX: id si string
+            role: 'user', 
+            text, 
+            file 
+        };
         
         let currentChatId = activeChatId;
 
@@ -66,17 +71,22 @@ const App: React.FC = () => {
         const updatedMessages = [...messages, userMessage];
         setMessages(updatedMessages);
 
-        const botMessage: ChatMessage = { id: Date.now() + 1, role: 'model', text: '', sources: [] };
+        const botMessage: ChatMessage = { 
+            id: (Date.now() + 1).toString(), // FIX: id si string
+            role: 'model', 
+            text: '', 
+            sources: [] 
+        };
         setMessages(prev => [...prev, botMessage]);
 
         try {
             const stream = await sendMessageStream(chatRef.current!, text, file);
             let fullResponse = '';
-            let lastChunk = null;
+            let lastChunk: any = null; // FIX: tipi i qartë
 
             for await (const chunk of stream) {
                 fullResponse += chunk.text;
-                lastChunk = chunk; // Keep track of the last chunk
+                lastChunk = chunk; 
                 setMessages(prev =>
                     prev.map(msg =>
                         msg.id === botMessage.id ? { ...msg, text: fullResponse } : msg
@@ -93,7 +103,15 @@ const App: React.FC = () => {
 
             setChats(prevChats => {
                 const newChats = prevChats.map(c => 
-                    c.id === currentChatId ? { ...c, messages: finalMessages, title: c.messages.length === 0 ? text.substring(0, 40) + (text.length > 40 ? '...' : '') : c.title } : c
+                    c.id === currentChatId 
+                        ? { 
+                            ...c, 
+                            messages: finalMessages, 
+                            title: c.messages.length === 0 
+                                ? text.substring(0, 40) + (text.length > 40 ? '...' : '') 
+                                : c.title 
+                          } 
+                        : c
                 );
                 chatHistoryService.saveChats(newChats);
                 return newChats;
@@ -132,7 +150,9 @@ const App: React.FC = () => {
     };
 
     const handleUpdateChatTitle = (chatId: string, newTitle: string) => {
-        const updatedChats = chats.map(c => c.id === chatId ? {...c, title: newTitle } : c);
+        const updatedChats = chats.map(c => 
+            c.id === chatId ? { ...c, title: newTitle } : c
+        );
         setChats(updatedChats);
         chatHistoryService.saveChats(updatedChats);
     };
