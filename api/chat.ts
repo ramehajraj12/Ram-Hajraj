@@ -28,27 +28,38 @@ export default async function handler(req: Request) {
   try {
     const { history, message } = (await req.json()) as { history: ChatMessage[], message: Part[] };
 
+    // Validim shtesë për të siguruar që mesazhi nuk është bosh
+    if (!message || !Array.isArray(message) || message.length === 0 || message.every(part => !part.text && !part.inlineData)) {
+        return new Response(JSON.stringify({ error: 'Mesazhi i përdoruesit është bosh ose i pavlefshëm.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+    
     const ai = new GoogleGenAI({ apiKey });
     
     // Ndërtojmë historikun e plotë të bisedës në mënyrë të sigurt
-    const contents: Content[] = history
-      .filter(msg => (msg.role === 'user' || msg.role === 'model')) // Sigurohemi për role të vlefshme
-      .map(msg => {
-          const parts: Part[] = [];
-          if (msg.text) {
-              parts.push({ text: msg.text });
-          }
-          if (msg.file) {
-              parts.push({
-                  inlineData: {
-                      mimeType: msg.file.type,
-                      data: msg.file.base64,
-                  },
-              });
-          }
-          return { role: msg.role, parts };
-      })
-      .filter(content => content.parts.length > 0); // Sigurohemi që mesazhet mos të jenë boshe
+    const contents: Content[] = [
+        // Rregullim Thelbësor: Kalojmë instruksionin si pjesë e historikut për stabilitet maksimal
+        {
+            role: 'user',
+            parts: [{ text: SYSTEM_INSTRUCTION }],
+        },
+        {
+            role: 'model',
+            parts: [{ text: "Unë jam Mentori. Si mund t'ju ndihmoj sot me SPSS, statistika ose metodologji kërkimore?" }],
+        },
+        ...history
+            .filter(msg => (msg.role === 'user' || msg.role === 'model') && (msg.text?.trim() || msg.file))
+            .map(msg => ({
+                role: msg.role,
+                parts: [
+                    ...(msg.text ? [{ text: msg.text }] : []),
+                    ...(msg.file ? [{ inlineData: { mimeType: msg.file.type, data: msg.file.base64 } }] : [])
+                ]
+            }))
+            .filter(content => content.parts.length > 0)
+    ];
 
     // Shtojmë mesazhin e ri të përdoruesit
     contents.push({
@@ -56,16 +67,11 @@ export default async function handler(req: Request) {
         parts: message,
     });
     
-    // Përdorim metodën stateless `generateContentStream`
     const resultStream = await ai.models.generateContentStream({
         model: 'gemini-2.5-flash',
         contents: contents,
-        config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-        },
     });
 
-    // Krijimi i një transmetimi (stream) që mund t'i dërgohet klientit
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -85,9 +91,10 @@ export default async function handler(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("Gabim në anën e serverit:", error);
+    console.error("Gabim i detajuar në server:", JSON.stringify(error, null, 2));
     const errorMessage = error.message || 'Detajet nuk janë të disponueshme.';
-    return new Response(JSON.stringify({ error: `Gabim i brendshëm në server: ${errorMessage}` }), {
+    const fullError = `Gabim i brendshëm në server: ${errorMessage}`;
+    return new Response(JSON.stringify({ error: fullError }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
