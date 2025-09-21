@@ -43,7 +43,6 @@ export default async function handler(req: Request) {
         history: buildHistory(history),
         config: {
             systemInstruction: SYSTEM_INSTRUCTION,
-            tools: [{googleSearch: {}}],
         },
     });
 

@@ -72,7 +72,18 @@ export const sendMessageStream = async (history: ChatMessage[], text: string, fi
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gabim në rrjet: ${response.status} - ${errorText}`);
+        let errorMessage = `Gabim në rrjet: ${response.status}`;
+        try {
+            const errorJson = JSON.parse(errorText);
+            // Përdorni mesazhin specifik të gabimit nga trupi JSON
+            errorMessage = errorJson.error || errorJson.details || errorMessage;
+        } catch (e) {
+            // Nëse trupi nuk është JSON ose dështon, përdorni tekstin e papërpunuar nëse ekziston
+            if (errorText) {
+                errorMessage = errorText;
+            }
+        }
+        throw new Error(errorMessage);
     }
 
     if (!response.body) {

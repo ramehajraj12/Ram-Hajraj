@@ -97,12 +97,27 @@ const App: React.FC = () => {
             });
 
         } catch (e: any) {
-            console.error(e);
-            const errorMessage = "Ndodhi një gabim gjatë marrjes së përgjigjes. Ju lutem provoni përsëri ose rifreskoni faqen.";
-            setError(errorMessage);
+            console.error("Gabim gjatë dërgimit të mesazhit:", e);
+            
+            let displayError = "Ndodhi një gabim i papritur. Ju lutem provoni përsëri.";
+
+            if (e && e.message) {
+                const lowerCaseError = e.message.toLowerCase();
+                if (lowerCaseError.includes('api key') || lowerCaseError.includes('api key nuk është konfiguruar')) {
+                    displayError = "Gabim Konfigurimi: Çelësi API (API Key) nuk është konfiguruar saktë në server. Sigurohuni që është vendosur saktë në cilësimet e projektit tuaj në Vercel dhe bëni një ri-publikim (re-deploy).";
+                } else if (e.message.includes('Gabim në rrjet: 500')) {
+                    displayError = "Ndodhi një gabim në server. Ju lutem provoni përsëri më vonë. Shkaku i mundshëm: Çelësi API mund të jetë i pavlefshëm ose i skaduar.";
+                } else {
+                    displayError = e.message;
+                }
+            } else if (e) {
+                displayError = String(e);
+            }
+
+            setError(displayError);
             setMessages(prev =>
                 prev.map(msg =>
-                    msg.id === botMessage.id ? { ...msg, text: errorMessage, isError: true } : msg
+                    msg.id === botMessage.id ? { ...msg, text: displayError, isError: true } : msg
                 )
             );
         } finally {
