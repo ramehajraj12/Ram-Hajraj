@@ -9,12 +9,11 @@ interface SidebarProps {
     onSelectChat: (id: string) => void;
     onOpenAbout: () => void;
     onOpenFaq: () => void;
-    onDeleteChat: (id: string) => void;
+    onClearChatMessages: (id: string) => void;
     onUpdateChatTitle: (id: string, newTitle: string) => void;
-    onClearAllChats: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat, onSelectChat, onOpenAbout, onOpenFaq, onDeleteChat, onUpdateChatTitle, onClearAllChats }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat, onSelectChat, onOpenAbout, onOpenFaq, onClearChatMessages, onUpdateChatTitle }) => {
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [newTitle, setNewTitle] = useState('');
     const editInputRef = useRef<HTMLInputElement>(null);
@@ -50,15 +49,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat
         }
     };
 
-    const handleDeleteWithConfirmation = (chatId: string) => {
-        if (window.confirm("Jeni i sigurt që doni të fshini këtë bisedë?")) {
-            onDeleteChat(chatId);
-        }
-    };
-
-    const handleClearAllWithConfirmation = () => {
-        if (window.confirm("Jeni i sigurt që doni të fshini të gjithë historikun e bisedave? Ky veprim nuk mund të kthehet pas.")) {
-            onClearAllChats();
+    const handleClearMessagesWithConfirmation = (chatId: string) => {
+        if (window.confirm("Jeni i sigurt që doni të fshini mesazhet e kësaj bisede?")) {
+            onClearChatMessages(chatId);
         }
     };
 
@@ -117,9 +110,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat
                                         <EditIcon className="w-4 h-4"/>
                                     </button>
                                      <button 
-                                        onClick={() => handleDeleteWithConfirmation(chat.id)}
+                                        onClick={() => handleClearMessagesWithConfirmation(chat.id)}
                                         className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-200 rounded-full"
-                                        aria-label="Fshij bisedën"
+                                        aria-label="Pastro mesazhet"
                                     >
                                         <TrashIcon className="w-4 h-4"/>
                                     </button>
@@ -145,14 +138,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat
                 >
                     <QuestionIcon className="h-5 w-5" />
                     <span>FAQ – Pyetjet më të shpeshta</span>
-                </button>
-                 <button 
-                    onClick={handleClearAllWithConfirmation}
-                    className="w-full flex items-center space-x-3 text-sm font-medium text-red-500 hover:text-red-700 transition-colors p-2 rounded-md hover:bg-red-50"
-                    aria-label="Fshij të gjitha bisedat"
-                >
-                    <TrashIcon className="h-5 w-5" />
-                    <span>Fshij të gjitha bisedat</span>
                 </button>
             </div>
         </aside>

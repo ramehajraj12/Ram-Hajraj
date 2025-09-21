@@ -120,12 +120,14 @@ const App: React.FC = () => {
         chatRef.current = initChat();
     };
 
-    const handleDeleteChat = (chatId: string) => {
-        const updatedChats = chats.filter(c => c.id !== chatId);
+    const handleClearChatMessages = (chatId: string) => {
+        const updatedChats = chats.map(c =>
+            c.id === chatId ? { ...c, messages: [] } : c
+        );
         setChats(updatedChats);
         chatHistoryService.saveChats(updatedChats);
         if (activeChatId === chatId) {
-            handleNewChat();
+            setMessages([]);
         }
     };
 
@@ -133,12 +135,6 @@ const App: React.FC = () => {
         const updatedChats = chats.map(c => c.id === chatId ? {...c, title: newTitle } : c);
         setChats(updatedChats);
         chatHistoryService.saveChats(updatedChats);
-    };
-
-    const handleClearAllChats = () => {
-        setChats([]);
-        setActiveChatId(null);
-        chatHistoryService.saveChats([]);
     };
 
     return (
@@ -154,9 +150,8 @@ const App: React.FC = () => {
                     onSelectChat={setActiveChatId}
                     onOpenAbout={() => setIsAboutModalOpen(true)}
                     onOpenFaq={() => setIsFaqModalOpen(true)}
-                    onDeleteChat={handleDeleteChat}
+                    onClearChatMessages={handleClearChatMessages}
                     onUpdateChatTitle={handleUpdateChatTitle}
-                    onClearAllChats={handleClearAllChats}
                 />
                 <div className="flex flex-col flex-1">
                     <main className="flex-1 overflow-hidden flex flex-col">
