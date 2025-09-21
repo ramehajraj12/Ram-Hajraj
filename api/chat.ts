@@ -26,50 +26,74 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { history, message } = (await req.json()) as { history: ChatMessage[], message: Part[] };
+    const { messages } = (await req.json()) as { messages: ChatMessage[] };
 
-    // Validim shtesë për të siguruar që mesazhi nuk është bosh
-    if (!message || !Array.isArray(message) || message.length === 0 || message.every(part => !part.text && !part.inlineData)) {
-        return new Response(JSON.stringify({ error: 'Mesazhi i përdoruesit është bosh ose i pavlefshëm.' }), {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return new Response(JSON.stringify({ error: 'Lista e mesazheve është bosh ose e pavlefshme.' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
         });
     }
     
     const ai = new GoogleGenAI({ apiKey });
-    
-    // Ndërtojmë historikun e plotë të bisedës në mënyrë të sigurt
-    const contents: Content[] = [
-        // Rregullim Thelbësor: Kalojmë instruksionin si pjesë e historikut për stabilitet maksimal
-        {
-            role: 'user',
-            parts: [{ text: SYSTEM_INSTRUCTION }],
-        },
-        {
-            role: 'model',
-            parts: [{ text: "Unë jam Mentori. Si mund t'ju ndihmoj sot me SPSS, statistika ose metodologji kërkimore?" }],
-        },
-        ...history
-            .filter(msg => (msg.role === 'user' || msg.role === 'model') && (msg.text?.trim() || msg.file))
-            .map(msg => ({
-                role: msg.role,
-                parts: [
-                    ...(msg.text ? [{ text: msg.text }] : []),
-                    ...(msg.file ? [{ inlineData: { mimeType: msg.file.type, data: msg.file.base64 } }] : [])
-                ]
-            }))
-            .filter(content => content.parts.length > 0)
-    ];
 
-    // Shtojmë mesazhin e ri të përdoruesit
-    contents.push({
-        role: 'user',
-        parts: message,
-    });
-    
+    // Hapi 1: Filtro mesazhet e pavlefshme dhe konvertoji në strukturën bazë `Content`.
+    const initialContents: Content[] = messages
+      .filter(msg => !msg.isError && (msg.text?.trim() || msg.file))
+      .map(msg => {
+          const parts: Part[] = [];
+          if (msg.text?.trim()) {
+              parts.push({ text: msg.text });
+          }
+          if (msg.file) {
+              parts.push({ inlineData: { mimeType: msg.file.type, data: msg.file.base64 } });
+          }
+          return { role: msg.role, parts };
+      });
+
+    // Hapi 2: Pastron historikun për të siguruar role alternative dhe për të bashkuar mesazhet e njëpasnjëshme.
+    const sanitizedHistory: Content[] = [];
+    if (initialContents.length > 0) {
+      // Gjej mesazhin e parë të përdoruesit për të filluar bisedën.
+      const firstUserIdx = initialContents.findIndex(c => c.role === 'user');
+
+      if (firstUserIdx !== -1) {
+        // Shto mesazhin e parë të përdoruesit
+        sanitizedHistory.push(initialContents[firstUserIdx]);
+
+        // Përpuno pjesën tjetër të mesazheve
+        for (let i = firstUserIdx + 1; i < initialContents.length; i++) {
+          const currentContent = initialContents[i];
+          const lastContentInHistory = sanitizedHistory[sanitizedHistory.length - 1];
+
+          // Nëse roli është i njëjtë me të fundit, bashko pjesët.
+          if (currentContent.role === lastContentInHistory.role) {
+            lastContentInHistory.parts.push(...currentContent.parts);
+          } else {
+            // Nëse roli është i ndryshëm, shtoje si një hyrje të re.
+            sanitizedHistory.push(currentContent);
+          }
+        }
+      }
+    }
+    const finalContents = sanitizedHistory;
+
+
+    // Validimi final: Sigurohu që ka përmbajtje dhe mesazhi i fundit është nga përdoruesi.
+    if (finalContents.length === 0 || finalContents[finalContents.length - 1].role !== 'user') {
+        return new Response(JSON.stringify({ error: 'Përmbajtja e vlefshme për t\'u dërguar mungon ose biseda nuk përfundon me një mesazh përdoruesi.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
     const resultStream = await ai.models.generateContentStream({
         model: 'gemini-2.5-flash',
-        contents: contents,
+        contents: finalContents,
+        config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            thinkingConfig: { thinkingBudget: 0 },
+        }
     });
 
     const stream = new ReadableStream({

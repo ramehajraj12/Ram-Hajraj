@@ -20,8 +20,3 @@ export interface ChatSession {
     title: string;
     messages: ChatMessage[];
 }
-
-// FIX: Add User interface for authentication.
-export interface User {
-    email: string;
-}

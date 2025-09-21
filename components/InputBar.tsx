@@ -130,7 +130,7 @@ export const InputBar: React.FC<InputBarProps> = ({ onSendMessage, isLoading }) 
                     onKeyDown={handleKeyDown}
                     disabled={isLoading}
                     placeholder={"Më shkruani pyetjen tuaj... (p.sh. 'Më trego si të bëj një t-test')"}
-                    className="w-full pl-12 pr-24 py-3 bg-transparent border-none resize-none focus:ring-0 text-slate-800 placeholder-slate-400 disabled:bg-slate-100/50"
+                    className="w-full pl-12 pr-24 py-3 bg-white border-none resize-none focus:ring-0 text-slate-800 placeholder-slate-400 disabled:opacity-50"
                     rows={1}
                     style={{ maxHeight: '200px' }}
                 />

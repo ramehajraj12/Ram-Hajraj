@@ -1,19 +1,18 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatSession } from '../types';
-import { PlusIcon, MessageIcon, InfoIcon, EditIcon, TrashIcon, CheckIcon, QuestionIcon } from './icons';
+import { PlusIcon, MessageIcon, EditIcon, TrashIcon, CheckIcon } from './icons';
 
 interface SidebarProps {
     chats: ChatSession[];
     activeChatId: string | null;
     onNewChat: () => void;
     onSelectChat: (id: string) => void;
-    onOpenAbout: () => void;
-    onOpenFaq: () => void;
     onClearChatMessages: (id: string) => void;
     onUpdateChatTitle: (id: string, newTitle: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat, onSelectChat, onOpenAbout, onOpenFaq, onClearChatMessages, onUpdateChatTitle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat, onSelectChat, onClearChatMessages, onUpdateChatTitle }) => {
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [newTitle, setNewTitle] = useState('');
     const editInputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat
 
     return (
         <aside className="w-72 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0 animate-slide-in-left">
-            <div className="p-4 border-b border-slate-200">
+            <div className="p-3 border-b border-slate-200">
                 <button
                     onClick={onNewChat}
                     className="w-full flex items-center justify-center space-x-2 bg-gradient-to-br from-green-600 to-teal-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow-lg hover:from-green-700 hover:to-teal-800 transition-all duration-300"
@@ -122,24 +121,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ chats, activeChatId, onNewChat
                     ))}
                 </ul>
             </nav>
-            <div className="p-3 border-t border-slate-200 space-y-1">
-                 <button 
-                    onClick={onOpenAbout}
-                    className="w-full flex items-center space-x-3 text-sm font-medium text-slate-600 hover:text-green-700 transition-colors p-2 rounded-md hover:bg-slate-100"
-                    aria-label="Rreth nesh dhe udhëzime"
-                >
-                    <InfoIcon className="h-5 w-5" />
-                    <span>Rreth Nesh & Udhëzime</span>
-                </button>
-                 <button 
-                    onClick={onOpenFaq} 
-                    className="w-full flex items-center space-x-3 text-sm font-medium text-slate-600 hover:text-green-700 transition-colors p-2 rounded-md hover:bg-slate-100"
-                    aria-label="Pyetjet më të shpeshta"
-                >
-                    <QuestionIcon className="h-5 w-5" />
-                    <span>FAQ – Pyetjet më të shpeshta</span>
-                </button>
-            </div>
         </aside>
     );
 };

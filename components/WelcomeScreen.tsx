@@ -11,12 +11,24 @@ const InfoCard: React.FC<{ icon: React.ReactNode; title: string; children: React
 
 export const WelcomeScreen: React.FC = () => {
     return (
-        <div className="flex flex-col items-center justify-center h-full bg-main-gradient p-4 md:p-8">
-            <div className="text-center mb-12">
-                <h1 className="text-5xl font-extrabold text-slate-800 mb-3">Mirë se vini te <span className="text-gradient">Mentori!</span></h1>
+        <div className="relative flex flex-col items-center justify-center h-full bg-slate-50 overflow-hidden p-4 md:p-8">
+            <ul className="statistical-symbols" aria-hidden="true">
+                <li>Σ</li>
+                <li>β</li>
+                <li>α</li>
+                <li>μ</li>
+                <li>χ²</li>
+                <li>📈</li>
+                <li>📊</li>
+                <li>σ</li>
+                <li>ρ</li>
+                <li>∫</li>
+            </ul>
+            <div className="relative z-10 text-center mb-12">
+                <h1 className="text-5xl font-extrabold text-slate-800 mb-3">Mirë se vini te <span className="text-gradient">SPSS Academy!</span></h1>
                 <p className="text-lg text-slate-600 max-w-3xl mx-auto">Për herë të parë në gjuhën shqipe, mentori juaj virtual për SPSS dhe kërkime shkencore. <br/> <span className="font-semibold text-slate-700">Gjithmonë i saktë, gjithmonë i disponueshëm, gjithmonë me integritet akademik.</span></p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
                 <InfoCard icon={<QuestionIcon className="h-8 w-8" />} title="Si të më pyesni?">
                     Më trajtoni si mentorin tuaj. Më jepni kontekst për studimin tuaj: specifikoni variablat, shkallën e matjes dhe analizën që kërkoni.
                 </InfoCard>
@@ -27,7 +39,7 @@ export const WelcomeScreen: React.FC = () => {
                     Unë nuk shpik përgjigje. Njohuritë e mia bazohen rreptësisht në literaturën më të mirë akademike (Field, Pallant, etj.) për të garantuar saktësi absolute.
                 </InfoCard>
             </div>
-            <p className="text-center text-slate-500 text-sm mt-12">
+            <p className="relative z-10 text-center text-slate-500 text-sm mt-12">
                 Shkruani pyetjen tuaj më poshtë për të filluar leksionin tonë.
             </p>
         </div>

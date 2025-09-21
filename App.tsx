@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Chat } from '@google/genai';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChatWindow } from './components/ChatWindow';
 import { InputBar } from './components/InputBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -30,13 +29,16 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // Prevent state overwrite during streaming response
+        if (isLoading) return;
+
         const activeChat = chats.find(c => c.id === activeChatId);
         if (activeChat) {
             setMessages(activeChat.messages);
         } else {
             setMessages([]);
         }
-    }, [activeChatId, chats]);
+    }, [activeChatId, chats, isLoading]);
 
     const handleSendMessage = useCallback(async (text: string, file: UploadedFile | null) => {
         if (!text.trim() && !file) return;
@@ -60,14 +62,13 @@ const App: React.FC = () => {
             localStorage.setItem('spss_last_active_chat_id', newChat.id);
         }
         
-        const updatedMessages = [...messages, userMessage];
-        setMessages(updatedMessages);
-
+        const messagesWithUser = [...messages, userMessage];
         const botMessage: ChatMessage = { id: Date.now() + 1, role: 'model', text: '', sources: [] };
-        setMessages(prev => [...prev, botMessage]);
+        setMessages([...messagesWithUser, botMessage]);
+
 
         try {
-            const stream = await sendMessageStream(updatedMessages, text, file);
+            const stream = await sendMessageStream(messagesWithUser);
             let fullResponse = '';
             let lastChunk = null;
 
@@ -83,10 +84,12 @@ const App: React.FC = () => {
             
             const sources = lastChunk?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
 
-            botMessage.text = fullResponse;
-            botMessage.sources = sources;
+            const finalBotMessage = { ...botMessage, text: fullResponse, sources };
             
-            const finalMessages = [...updatedMessages, botMessage];
+            const finalMessages = [...messagesWithUser, finalBotMessage];
+            
+            // FIX: Explicitly set the final message state to guarantee UI update
+            setMessages(finalMessages);
 
             setChats(prevChats => {
                 const newChats = prevChats.map(c => 
@@ -100,11 +103,21 @@ const App: React.FC = () => {
             console.error("Gabim gjatë dërgimit të mesazhit:", e);
             const displayError = (e instanceof Error) ? e.message : "Ndodhi një gabim i panjohur. Ju lutem provoni përsëri.";
             setError(displayError);
-            setMessages(prev =>
-                prev.map(msg =>
-                    msg.id === botMessage.id ? { ...msg, text: displayError, isError: true } : msg
-                )
-            );
+
+            const errorBotMessage = { ...botMessage, text: displayError, isError: true };
+            const finalMessagesWithError = [...messagesWithUser, errorBotMessage];
+            
+            // Update the UI with the error
+            setMessages(finalMessagesWithError);
+            
+            // Persist the error to chat history
+            setChats(prevChats => {
+                const newChats = prevChats.map(c => 
+                    c.id === currentChatId ? { ...c, messages: finalMessagesWithError } : c
+                );
+                chatHistoryService.saveChats(newChats);
+                return newChats;
+            });
         } finally {
             setIsLoading(false);
         }
@@ -142,15 +155,13 @@ const App: React.FC = () => {
         <div className="flex flex-col h-screen font-sans bg-slate-50 text-slate-800">
             <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
             <FAQModal isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
-            <Header />
+            <Header onOpenAbout={() => setIsAboutModalOpen(true)} onOpenFaq={() => setIsFaqModalOpen(true)} />
             <div className="flex-1 overflow-hidden flex">
                  <Sidebar 
                     chats={chats}
                     activeChatId={activeChatId}
                     onNewChat={handleNewChat}
                     onSelectChat={handleSelectChat}
-                    onOpenAbout={() => setIsAboutModalOpen(true)}
-                    onOpenFaq={() => setIsFaqModalOpen(true)}
                     onClearChatMessages={handleClearChatMessages}
                     onUpdateChatTitle={handleUpdateChatTitle}
                 />

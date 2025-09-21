@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF--8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mentori | SPSS Academy Mentor</title>
+    <title>SPSS Talk</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,10 +12,45 @@
       body {
         font-family: 'Inter', sans-serif;
       }
-      .bg-main-gradient {
-        background-color: #f8fafc;
-        background-image: radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0);
-        background-size: 2rem 2rem;
+      .statistical-symbols {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .statistical-symbols li {
+        position: absolute;
+        display: block;
+        list-style: none;
+        font-family: 'Times New Roman', serif;
+        color: rgba(13, 148, 136, 0.1);
+        bottom: -200px;
+        animation: animate-symbols 25s linear infinite;
+      }
+      .statistical-symbols li:nth-child(1) { left: 25%; font-size: 80px; animation-delay: 0s; }
+      .statistical-symbols li:nth-child(2) { left: 10%; font-size: 20px; animation-delay: 2s; animation-duration: 12s; }
+      .statistical-symbols li:nth-child(3) { left: 70%; font-size: 30px; animation-delay: 4s; }
+      .statistical-symbols li:nth-child(4) { left: 40%; font-size: 60px; animation-delay: 0s; animation-duration: 18s; }
+      .statistical-symbols li:nth-child(5) { left: 65%; font-size: 25px; animation-delay: 1s; animation-duration: 20s;}
+      .statistical-symbols li:nth-child(6) { left: 75%; font-size: 110px; animation-delay: 3s; opacity: 0.05;}
+      .statistical-symbols li:nth-child(7) { left: 35%; font-size: 150px; animation-delay: 7s; opacity: 0.08;}
+      .statistical-symbols li:nth-child(8) { left: 50%; font-size: 25px; animation-delay: 15s; animation-duration: 45s; }
+      .statistical-symbols li:nth-child(9) { left: 20%; font-size: 15px; animation-delay: 2s; animation-duration: 35s; }
+      .statistical-symbols li:nth-child(10) { left: 85%; font-size: 120px; animation-delay: 0s; animation-duration: 11s; opacity: 0.06;}
+
+      @keyframes animate-symbols {
+          0% {
+              transform: translateY(0) rotate(0deg);
+              opacity: 1;
+          }
+          100% {
+              transform: translateY(-120vh) rotate(360deg);
+              opacity: 0;
+          }
       }
       .text-gradient {
         background: linear-gradient(to right, #15803d, #0d9488);

@@ -5,7 +5,17 @@ import { UserIcon, FileIcon, CopyIcon, LinkIcon, SPSSAcademyLogo } from './icons
 
 interface MessageProps {
     message: ChatMessage;
+    isLastMessage: boolean;
+    isLoading: boolean;
 }
+
+const PulsingDots = () => (
+    <div className="flex items-center space-x-1.5">
+        <span className="animate-pulse block w-2.5 h-2.5 bg-slate-400 rounded-full" style={{ animationDelay: '0s' }}></span>
+        <span className="animate-pulse block w-2.5 h-2.5 bg-slate-400 rounded-full" style={{ animationDelay: '0.2s' }}></span>
+        <span className="animate-pulse block w-2.5 h-2.5 bg-slate-400 rounded-full" style={{ animationDelay: '0.4s' }}></span>
+    </div>
+);
 
 // Component to render a table with a copy button
 const TableWithCopyButton: React.FC<{ tableHtml: string }> = ({ tableHtml }) => {
@@ -129,7 +139,7 @@ const Sources: React.FC<{ sources: GroundingChunk[] }> = ({ sources }) => (
 );
 
 
-export const Message: React.FC<MessageProps> = ({ message }) => {
+export const Message: React.FC<MessageProps> = ({ message, isLastMessage, isLoading }) => {
     const [isVisible, setIsVisible] = useState(false);
     
     useEffect(() => {
@@ -138,6 +148,7 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
     }, []);
 
     const isUser = message.role === 'user';
+    const showTypingIndicator = !isUser && isLastMessage && isLoading;
     
     const containerClasses = isUser ? "flex justify-end items-end space-x-3" : "flex justify-start items-end space-x-3";
     const bubbleClasses = isUser
@@ -170,8 +181,14 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
                     <div className="whitespace-pre-wrap">{message.text}</div>
                  ) : (
                     <>
-                        <div className="text-[15px] leading-relaxed max-w-none prose prose-slate">{formatText(message.text)}</div>
-                        {message.sources && message.sources.length > 0 && <Sources sources={message.sources} />}
+                        {showTypingIndicator && message.text.length === 0 ? (
+                            <PulsingDots />
+                        ) : (
+                            <>
+                                <div className="text-[15px] leading-relaxed max-w-none prose prose-slate">{formatText(message.text)}</div>
+                                {message.sources && message.sources.length > 0 && <Sources sources={message.sources} />}
+                            </>
+                        )}
                     </>
                  )}
             </div>

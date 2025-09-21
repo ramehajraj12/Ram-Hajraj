@@ -40,22 +40,9 @@ async function* streamGenerator(stream: ReadableStream<Uint8Array>): AsyncGenera
 }
 
 
-export const sendMessageStream = async (history: ChatMessage[], text: string, file: UploadedFile | null): Promise<AsyncGenerator<GenerateContentResponse>> => {
-
-    const parts: Part[] = [];
-    if (file) {
-        parts.push({
-            inlineData: {
-                mimeType: file.type,
-                data: file.base64,
-            },
-        });
-    }
-    if (text) {
-        parts.push({ text });
-    }
+export const sendMessageStream = async (messages: ChatMessage[]): Promise<AsyncGenerator<GenerateContentResponse>> => {
     
-    if (parts.length === 0) {
+    if (!messages || messages.length === 0) {
         throw new Error("Nuk mund të dërgohet një mesazh bosh.");
     }
     
@@ -64,10 +51,7 @@ export const sendMessageStream = async (history: ChatMessage[], text: string, fi
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            history: history.slice(0, -1), // Send history without the latest user message
-            message: parts,
-        }),
+        body: JSON.stringify({ messages }),
     });
 
     if (!response.ok) {
