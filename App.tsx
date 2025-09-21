@@ -3,14 +3,14 @@ import type { Chat } from '@google/genai';
 import { ChatWindow } from './components/ChatWindow';
 import { InputBar } from './components/InputBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
-// FIX: Import UploadedFile type.
 import type { ChatMessage, ChatSession, UploadedFile } from './types';
-import { initChat, sendMessageStream, apiKeyError } from './services/geminiService';
+import { initializeGeminiClient, apiKeyError as initialApiKeyError, initChat, sendMessageStream } from './services/geminiService';
 import { Header } from './components/Header';
 import { AboutModal } from './components/AboutModal';
 import { Sidebar } from './components/Sidebar';
 import * as chatHistoryService from './services/chatHistoryService';
 import { FAQModal } from './components/FAQModal';
+import { ApiKeySetup } from './components/ApiKeySetup';
 
 const App: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -21,34 +21,51 @@ const App: React.FC = () => {
     const [chats, setChats] = useState<ChatSession[]>([]);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     
+    const [isApiReady, setIsApiReady] = useState<boolean>(!initialApiKeyError);
+    const [apiKeyError, setApiKeyErrorState] = useState<string | null>(initialApiKeyError);
+    
     const chatRef = useRef<Chat | null>(null);
 
     useEffect(() => {
         const savedChats = chatHistoryService.getChats();
         setChats(savedChats);
-        if (apiKeyError) {
-            setError(apiKeyError);
+        
+        if (!isApiReady) {
+            const storedKey = sessionStorage.getItem('gemini_api_key');
+            if (storedKey) {
+                handleApiKeySubmit(storedKey, true); // silentFail = true
+            }
         }
     }, []);
 
     useEffect(() => {
-        if (activeChatId) {
+        if (isApiReady) {
             const activeChat = chats.find(c => c.id === activeChatId);
             if (activeChat) {
                 setMessages(activeChat.messages);
                 chatRef.current = initChat(activeChat.messages);
+            } else {
+                setMessages([]);
+                chatRef.current = initChat([]);
             }
-        } else {
-            setMessages([]);
-            chatRef.current = initChat([]);
         }
-    }, [activeChatId, chats]);
+    }, [isApiReady, activeChatId, chats]);
 
+    const handleApiKeySubmit = (apiKey: string, silentFail = false) => {
+        if (initializeGeminiClient(apiKey)) {
+            setIsApiReady(true);
+            setApiKeyErrorState(null);
+            sessionStorage.setItem('gemini_api_key', apiKey);
+        } else if (!silentFail) {
+            setApiKeyErrorState("API Key i pavlefshëm. Ju lutem provoni përsëri ose gjeneroni një të ri.");
+        }
+    };
+    
     const handleSendMessage = useCallback(async (text: string, file: UploadedFile | null) => {
         if (!text.trim() && !file) return;
 
         if (!chatRef.current) {
-            setError(apiKeyError || "Shërbimi i bisedës nuk është i disponueshëm. Ju lutem kontrolloni konfigurimin.");
+            setError("Shërbimi i bisedës nuk është i disponueshem. Provoni të rifreskoni faqen.");
             setIsLoading(false);
             return;
         }
@@ -84,7 +101,7 @@ const App: React.FC = () => {
 
             for await (const chunk of stream) {
                 fullResponse += chunk.text;
-                lastChunk = chunk; // Keep track of the last chunk
+                lastChunk = chunk;
                 setMessages(prev =>
                     prev.map(msg =>
                         msg.id === botMessage.id ? { ...msg, text: fullResponse } : msg
@@ -145,6 +162,10 @@ const App: React.FC = () => {
         chatHistoryService.saveChats(updatedChats);
     };
 
+    if (!isApiReady) {
+        return <ApiKeySetup onApiKeySubmit={handleApiKeySubmit} initialError={apiKeyError} />;
+    }
+
     return (
         <div className="flex flex-col h-screen font-sans bg-slate-50 text-slate-800">
             <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
@@ -170,7 +191,7 @@ const App: React.FC = () => {
                         )}
                     </main>
                     <footer className="bg-transparent p-4">
-                        <InputBar onSendMessage={handleSendMessage} isLoading={isLoading || !!apiKeyError} />
+                        <InputBar onSendMessage={handleSendMessage} isLoading={isLoading} />
                         {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
                         <p className="text-xs text-slate-500 font-medium text-center mt-3 max-w-4xl mx-auto">
                            Mentori është gjithmonë i gatshëm t'ju udhëheqë me saktësi dhe integritet akademik. Bëni pyetjen tuaj për të filluar.

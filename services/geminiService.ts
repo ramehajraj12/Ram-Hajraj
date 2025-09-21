@@ -3,23 +3,46 @@ import type { Chat, Part, Content, GenerateContentResponse } from '@google/genai
 import { SYSTEM_INSTRUCTION } from '../constants';
 import type { UploadedFile, ChatMessage } from '../types';
 
-export const apiKeyError: string | null = !process.env.API_KEY
-    ? "Vërejtje: Konfigurimi i API Key mungon. Ju lutem, për të aktivizuar funksionalitetin e plotë, shtoni variablën e mjedisit API_KEY në cilësimet e projektit tuaj (p.sh., në Vercel)."
-    : null;
+let ai: GoogleGenAI | null = null;
+export let apiKeyError: string | null = null;
+let isInitialized = false;
 
-const ai = apiKeyError ? null : new GoogleGenAI({ apiKey: process.env.API_KEY! });
+export function initializeGeminiClient(key: string): boolean {
+    if (!key || typeof key !== 'string' || key.trim() === '') {
+        isInitialized = false;
+        apiKeyError = "API Key i dhënë është i pavlefshëm.";
+        return false;
+    }
+    try {
+        const client = new GoogleGenAI({ apiKey: key });
+        ai = client;
+        isInitialized = true;
+        apiKeyError = null;
+        return true;
+    } catch (e) {
+        console.error("Dështoi krijimi i klientit GoogleGenAI:", e);
+        isInitialized = false;
+        apiKeyError = "API Key i pavlefshëm ose gabim në konfigurim.";
+        return false;
+    }
+}
 
+// Provo të inicializosh nga variabli i mjedisit në fillim
+const envKey = process.env.API_KEY;
+if (envKey) {
+    initializeGeminiClient(envKey);
+} else {
+    apiKeyError = "Vërejtje: Konfigurimi i API Key mungon. Ju lutem, vendoseni për të aktivizuar funksionalitetin e plotë.";
+}
 
 const buildHistory = (messages: ChatMessage[]): Content[] => {
     return messages.map(msg => {
-        // Filter out file property from model messages as model can't "send" files
         if (msg.role === 'model') {
             return {
                 role: 'model',
                 parts: [{ text: msg.text }]
             }
         }
-
         const parts: Part[] = [{ text: msg.text }];
         if (msg.file) {
             parts.unshift({
@@ -37,8 +60,8 @@ const buildHistory = (messages: ChatMessage[]): Content[] => {
 };
 
 export const initChat = (history: ChatMessage[] = []): Chat | null => {
-    if (!ai) {
-        console.error(apiKeyError);
+    if (!isInitialized || !ai) {
+        console.error(apiKeyError || "Klienti i Gemini AI nuk është inicializuar.");
         return null;
     }
     return ai.chats.create({
@@ -52,6 +75,10 @@ export const initChat = (history: ChatMessage[] = []): Chat | null => {
 };
 
 export const sendMessageStream = async (chat: Chat, text: string, file: UploadedFile | null): Promise<AsyncGenerator<GenerateContentResponse>> => {
+    if (!isInitialized) {
+         throw new Error("Klienti i Gemini AI nuk është inicializuar.");
+    }
+
     const parts: Part[] = [];
 
     if (file) {
@@ -68,10 +95,9 @@ export const sendMessageStream = async (chat: Chat, text: string, file: Uploaded
     }
     
     if (parts.length === 0) {
-        throw new Error("Cannot send an empty message.");
+        throw new Error("Nuk mund të dërgohet një mesazh bosh.");
     }
 
-    // FIX: The `sendMessageStream` method expects an object with a `message` property, which contains the array of parts.
     const resultStream = await chat.sendMessageStream({ message: parts });
     return resultStream;
 };
