@@ -31,7 +31,7 @@ const App: React.FC = () => {
         setChats(savedChats);
         
         if (!isApiReady) {
-            const storedKey = sessionStorage.getItem('gemini_api_key');
+            const storedKey = localStorage.getItem('gemini_api_key');
             if (storedKey) {
                 handleApiKeySubmit(storedKey, true); // silentFail = true
             }
@@ -55,7 +55,7 @@ const App: React.FC = () => {
         if (initializeGeminiClient(apiKey)) {
             setIsApiReady(true);
             setApiKeyErrorState(null);
-            sessionStorage.setItem('gemini_api_key', apiKey);
+            localStorage.setItem('gemini_api_key', apiKey);
         } else if (!silentFail) {
             setApiKeyErrorState("API Key i pavlefshëm. Ju lutem provoni përsëri ose gjeneroni një të ri.");
         }
