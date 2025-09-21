@@ -30,22 +30,25 @@ export default async function handler(req: Request) {
 
     const ai = new GoogleGenAI({ apiKey });
     
-    // Ndërtojmë historikun e plotë të bisedës
-    const contents: Content[] = history.map(msg => {
-        const parts: Part[] = [];
-        if (msg.text) {
-            parts.push({ text: msg.text });
-        }
-        if (msg.file) {
-            parts.push({
-                inlineData: {
-                    mimeType: msg.file.type,
-                    data: msg.file.base64,
-                },
-            });
-        }
-        return { role: msg.role, parts };
-    });
+    // Ndërtojmë historikun e plotë të bisedës në mënyrë të sigurt
+    const contents: Content[] = history
+      .filter(msg => (msg.role === 'user' || msg.role === 'model')) // Sigurohemi për role të vlefshme
+      .map(msg => {
+          const parts: Part[] = [];
+          if (msg.text) {
+              parts.push({ text: msg.text });
+          }
+          if (msg.file) {
+              parts.push({
+                  inlineData: {
+                      mimeType: msg.file.type,
+                      data: msg.file.base64,
+                  },
+              });
+          }
+          return { role: msg.role, parts };
+      })
+      .filter(content => content.parts.length > 0); // Sigurohemi që mesazhet mos të jenë boshe
 
     // Shtojmë mesazhin e ri të përdoruesit
     contents.push({
